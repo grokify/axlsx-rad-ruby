@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <title>AxlsxRad - Ruby by grokify</title>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <h1>AxlsxRad - Ruby</h1>
+        <h2>Rapid development of XSLX spreadsheets using Axlsx</h2>
+        <a href="https://github.com/grokify/axlsx-rad-ruby" class="button"><small>View project on</small>GitHub</a>
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
+<a name="axlsxrad---rapid-xlsx-writer-for-customized-spreadsheets" class="anchor" href="#axlsxrad---rapid-xlsx-writer-for-customized-spreadsheets"><span class="octicon octicon-link"></span></a>AxlsxRad - Rapid XLSX Writer for Customized Spreadsheets</h1>
+
+<h2>
+<a name="synopsis" class="anchor" href="#synopsis"><span class="octicon octicon-link"></span></a>Synopsis</h2>
+
+<p>AxlsxRad provides a rapid capability to generate styled spreadsheets of JSON
+objects to enable the creation of reports with both per-row and per-cell
+highlighting.</p>
+
+<p>This is accomplished by leveraging JsonDoc's encapsulation of JSON objects
+with easy retrieval of property names and values as arrays that are used by
+AxlsxRad to populate XLSX spreadsheets. This is done by simply providing an
+array of JSON property keys and then adding JsonDoc objects to the worksheet.</p>
+
+<p>Axlsx additionally supports rapid styling of spreadsheets by accepting a
+set of styles and rules for applying those styles to each row. Both a header
+row and data rows can be styled with both default background styles for the
+entire row and custom styles on a per cell basis. Per-cell styles are assigned
+by JsonDoc property key so there is no need to create arrays of styles per
+row and to remember which column is located in which array index - it is all
+done automatically.</p>
+
+<p>Customization consists of:</p>
+
+<ul>
+<li>a list of JSON property keys that are used as columns</li>
+<li>a dictionary of styles by style key</li>
+<li>overridable header and row methods tto provide custom styling rules</li>
+</ul><p>Finally, Axlsx provides full access to the Axlsx package, workbook and
+worksheet objects so fast customization can be supported in addition to 
+standard access.</p>
+
+<h2>
+<a name="installing" class="anchor" href="#installing"><span class="octicon octicon-link"></span></a>Installing</h2>
+
+<p>Download and install axlsx_rad with the following:</p>
+
+<pre><code>gem install axlsx_rad
+</code></pre>
+
+<h1>
+<a name="examples" class="anchor" href="#examples"><span class="octicon octicon-link"></span></a>Examples</h1>
+
+<hr><pre><code>require 'axlsx_rad'
+
+# Create an AxlsxRad::Config object, often per-worksheet
+# Define worksheet columns. These keys should exist in JsonDoc
+# object / subclass properties.
+columns = [ :first_name, :last_name, :email_address, :github_username ]
+
+# Define styles
+styles     =  {
+  :blue    =&gt; { :bg_color =&gt; '00CCFF' },
+  :green   =&gt; { :bg_color =&gt; '00FF99' },
+  :ltgreen =&gt; { :bg_color =&gt; '99FF99' },
+  :yellow  =&gt; { :bg_color =&gt; 'FFFF99' },
+  :orange  =&gt; { :bg_color =&gt; 'FFCC66' },
+  :white   =&gt; { :bg_color =&gt; 'FFFFFF' },
+  :head    =&gt; { :bg_color =&gt; '00FFFF', :b =&gt; true}
+}
+
+# Subclass AxlsxRad::Config object. This object has accepts the columns,
+# styles and unique key initialization parameters, setting them to the
+# aColumns, dStylesCfg and xxKeyUnique attributes. It doesn't matter how
+# they are set but they should be set before instantiating a
+# AxlsxRad::Worksheet object. Additionally, the #getStylesForHeader() and
+# #getStylesForDocument( document ) methods should be overridden to return
+# a style hash as shown below.
+#
+# The contract contains the #getStylesForHeader and
+# #getStylesForDocument( JsonDoc::Document ) methods.
+#
+# The style names used in the reponse hash should correspond to the style
+# keys used in the styles configuration hash above.
+
+class MyWorksheetConfig &lt; AxlsxRad::Config
+  def initialize(columns=[],styles={},unique_key=nil)
+    @aColumns    = columns
+    @dStylesCfg  = styles
+    @xxKeyUnique = unique_key
+  end
+  def getStylesForHeader()
+    return { :bgstyle =&gt; :head }
+  end
+  def getStylesForDocument( oDocument=nil )
+    dStyles = { :bgstyle =&gt; :white, :properties =&gt; {} }
+    if oDocument.getProp(:github_username)
+      dStyles[:bgstyle] = :green
+      dstyles[:properties][:github_username] = :yellow
+    elsif oDocument.getProp(:email_address)
+      dStyles[:bgstyle] = :blue
+      dstyles[:properties][:email_address] = :yellow
+    end
+    return dStyles
+  end
+end
+
+# Instantiate a config object
+config    = MyWorksheetConfig.new( columns, styles )
+
+# Instantiate a workbook
+workbook  = AxlsxRad::Workbook.new
+
+# Instantiate a worksheet with name and config
+worksheet = workbook.addWorksheet( "Users", config )
+
+# Add documents where user is a JsonDoc::Document subclass
+# with properties matching those tested against in Axlsx::Config
+# subclass.
+
+users.each do |user|
+  worksheet.addDocument( user )
+end
+
+# Write XLSX spreadsheet
+workbook.serialize('example_users.xlsx')
+
+# Write XLSX spreadsheet by accessing the Axlsx::Package object
+workbook.oAxlsx.serialize('example_users.xlsx')
+</code></pre>
+
+<h1>
+<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>Documentation</h1>
+
+<hr><p>This gem is 100% documented with YARD, an exceptional documentation library. To see documentation for this, and all the gems installed on your system use:</p>
+
+<pre><code>$ gem install yard
+$ yard server -g
+</code></pre>
+
+<h2>
+<a name="notes" class="anchor" href="#notes"><span class="octicon octicon-link"></span></a>Notes</h2>
+
+<ol>
+<li>Removing duplicate documents
+
+<ul>
+<li>If the unique_key parameter is set in the AxlsxRad::Config object, that key will be checked to retain or discard added documents which can streamline the adding process. Not setting this value or setting this value to nil will disable checking and add all documents. </li>
+</ul>
+</li>
+</ol><h1>
+<a name="change-log" class="anchor" href="#change-log"><span class="octicon octicon-link"></span></a>Change Log</h1>
+
+<hr><ul>
+<li>
+<strong>2014-03-23</strong>: 0.0.2
+
+<ul>
+<li>Add ability to filter duplicate documents</li>
+<li>Add AxlsxRad::Workbook::serialize shortcut</li>
+</ul>
+</li>
+<li>
+<strong>2014-03-21</strong>: 0.0.1
+
+<ul>
+<li>Initial release</li>
+</ul>
+</li>
+</ul><h1>
+<a name="links" class="anchor" href="#links"><span class="octicon octicon-link"></span></a>Links</h1>
+
+<hr><p>Axlsx</p>
+
+<p><a href="https://rubygems.org/gems/axlsx">https://rubygems.org/gems/axlsx</a></p>
+
+<p>JsonDoc</p>
+
+<p><a href="https://rubygems.org/gems/jsondoc">https://rubygems.org/gems/jsondoc</a></p>
+
+<h1>
+<a name="copyright-and-license" class="anchor" href="#copyright-and-license"><span class="octicon octicon-link"></span></a>Copyright and License</h1>
+
+<hr><p>AxlsxRad © 2014 by <a href="mailto:johncwang@gmail.com">John Wang</a>.</p>
+
+<p>AxlsxRad is licensed under the MIT license. Please see the LICENSE document for more information.</p>
+
+<h2>
+<a name="warranty" class="anchor" href="#warranty"><span class="octicon octicon-link"></span></a>Warranty</h2>
+
+<p>This software is provided "as is" and without any express or implied warranties, including, without limitation, the implied warranties of merchantibility and fitness for a particular purpose.</p>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/grokify/axlsx-rad-ruby/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/grokify/axlsx-rad-ruby/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/grokify/axlsx-rad-ruby"></a> is maintained by <a href="https://github.com/grokify">grokify</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
+    </div>
+
+  
+  </body>
+</html>
