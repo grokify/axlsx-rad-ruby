@@ -1,8 +1,15 @@
 AxlsxRad - Rapid XLSX Writer for Customized Spreadsheets
 ========================================================
 
-Synopsis
---------
+[![Gem Version][gem-version-svg]][gem-version-link]
+[![Dependency Status][dependency-status-svg]][dependency-status-link]
+[![Code Climate][codeclimate-status-svg]][codeclimate-status-link]
+[![Scrutinizer Code Quality][scrutinizer-status-svg]][scrutinizer-status-link]
+[![Downloads][downloads-svg]][downloads-link]
+[![Docs][docs-rubydoc-svg]][docs-rubydoc-link]
+[![License][license-svg]][license-link]
+
+## Synopsis
 
 AxlsxRad provides a rapid capability to generate styled spreadsheets of JSON
 objects to enable the creation of reports with both per-row and per-cell
@@ -31,109 +38,112 @@ Finally, Axlsx provides full access to the Axlsx package, workbook and
 worksheet objects so fast customization can be supported in addition to 
 standard access.
 
-Installing
-----------
+## Installation
 
 Download and install axlsx_rad with the following:
 
-    gem install axlsx_rad
+```bash
+$ gem install axlsx_rad
+```
 
-#Examples
----------
+## Usage
 
-    require 'axlsx_rad'
+```ruby
+require 'axlsx_rad'
 
-    # Create an AxlsxRad::Config object, often per-worksheet
-    # Define worksheet columns. These keys should exist in JsonDoc
-    # object / subclass properties.
-    columns = [ :first_name, :last_name, :email_address, :github_username ]
+# Create an AxlsxRad::Config object, often per-worksheet
+# Define worksheet columns. These keys should exist in JsonDoc
+# object / subclass properties.
+columns = [ :first_name, :last_name, :email_address, :github_username ]
 
-    # Define styles
-    styles     =  {
-      :blue    => { :bg_color => '00CCFF' },
-      :green   => { :bg_color => '00FF99' },
-      :ltgreen => { :bg_color => '99FF99' },
-      :yellow  => { :bg_color => 'FFFF99' },
-      :orange  => { :bg_color => 'FFCC66' },
-      :white   => { :bg_color => 'FFFFFF' },
-      :head    => { :bg_color => '00FFFF', :b => true}
-    }
+# Define styles
+styles     =  {
+  blue:    { bg_color: '00CCFF' },
+  green:   { bg_color: '00FF99' },
+  ltgreen: { bg_color: '99FF99' },
+  yellow:  { bg_color: 'FFFF99' },
+  orange:  { bg_color: 'FFCC66' },
+  white:   { bg_color: 'FFFFFF' },
+  head:    { bg_color: '00FFFF', b: true}
+}
 
-    # Subclass AxlsxRad::Config object. This object has accepts the columns,
-    # styles and unique key initialization parameters, setting them to the
-    # aColumns, dStylesCfg and xxKeyUnique attributes. It doesn't matter how
-    # they are set but they should be set before instantiating a
-    # AxlsxRad::Worksheet object. Additionally, the #getStylesForHeader() and
-    # #getStylesForDocument( document ) methods should be overridden to return
-    # a style hash as shown below.
-    #
-    # The contract contains the #getStylesForHeader and
-    # #getStylesForDocument( JsonDoc::Document ) methods.
-    #
-    # The style names used in the reponse hash should correspond to the style
-    # keys used in the styles configuration hash above.
+# Subclass AxlsxRad::Config object. This object has accepts the columns,
+# styles and unique key initialization parameters, setting them to the
+# aColumns, dStylesCfg and xxKeyUnique attributes. It doesn't matter how
+# they are set but they should be set before instantiating a
+# AxlsxRad::Worksheet object. Additionally, the #getStylesForHeader() and
+# #getStylesForDocument( document ) methods should be overridden to return
+# a style hash as shown below.
+#
+# The contract contains the #getStylesForHeader and
+# #getStylesForDocument( JsonDoc::Document ) methods.
+#
+# The style names used in the reponse hash should correspond to the style
+# keys used in the styles configuration hash above.
 
-    class MyWorksheetConfig < AxlsxRad::Config
-      def initialize(columns=[],styles={},unique_key=nil)
-        @aColumns    = columns
-        @dStylesCfg  = styles
-        @xxKeyUnique = unique_key
-      end
-      def getStylesForHeader()
-        return { :bgstyle => :head }
-      end
-      def getStylesForDocument( oDocument=nil )
-        dStyles = { :bgstyle => :white, :properties => {} }
-        if oDocument.getProp(:github_username)
-          dStyles[:bgstyle] = :green
-          dstyles[:properties][:github_username] = :yellow
-        elsif oDocument.getProp(:email_address)
-          dStyles[:bgstyle] = :blue
-          dstyles[:properties][:email_address] = :yellow
-        end
-        return dStyles
-      end
+class MyWorksheetConfig < AxlsxRad::Config
+  def initialize(columns=[], styles={}, unique_key=nil)
+    @aColumns    = columns
+    @dStylesCfg  = styles
+    @xxKeyUnique = unique_key
+  end
+
+  def getStylesForHeader()
+    return { bgstyle: :head }
+  end
+
+  def getStylesForDocument( oDocument=nil )
+    dStyles = { bgstyle: :white, properties: {} }
+    if oDocument.getProp(:github_username)
+      dStyles[:bgstyle] = :green
+      dstyles[:properties][:github_username] = :yellow
+    elsif oDocument.getProp(:email_address)
+      dStyles[:bgstyle] = :blue
+      dStyles[:properties][:email_address] = :yellow
     end
+    return dStyles
+  end
+end
 
-    # Instantiate a config object
-    config    = MyWorksheetConfig.new( columns, styles )
+# Instantiate a config object
+config    = MyWorksheetConfig.new( columns, styles )
 
-    # Instantiate a workbook
-    workbook  = AxlsxRad::Workbook.new
+# Instantiate a workbook
+workbook  = AxlsxRad::Workbook.new
 
-    # Instantiate a worksheet with name and config
-    worksheet = workbook.addWorksheet( "Users", config )
+# Instantiate a worksheet with name and config
+worksheet = workbook.addWorksheet( "Users", config )
 
-    # Add documents where user is a JsonDoc::Document subclass
-    # with properties matching those tested against in Axlsx::Config
-    # subclass.
+# Add documents where user is a JsonDoc::Document subclass
+# with properties matching those tested against in Axlsx::Config
+# subclass.
 
-    users.each do |user|
-      worksheet.addDocument( user )
-    end
+users.each do |user|
+  worksheet.addDocument( user )
+end
 
-    # Write XLSX spreadsheet
-    workbook.serialize('example_users.xlsx')
+# Write XLSX spreadsheet
+workbook.serialize('example_users.xlsx')
 
-    # Write XLSX spreadsheet by accessing the Axlsx::Package object
-    workbook.oAxlsx.serialize('example_users.xlsx')
+# Write XLSX spreadsheet by accessing the Axlsx::Package object
+workbook.oAxlsx.serialize('example_users.xlsx')
+```
 
-#Documentation
---------------
+## Documentation
 
 This gem is 100% documented with YARD, an exceptional documentation library. To see documentation for this, and all the gems installed on your system use:
 
-    $ gem install yard
-    $ yard server -g
+```bash
+$ gem install yard
+$ yard server -g
+```
 
-Notes
------
+## Notes
 
 1. Removing duplicate documents
- - If the unique_key parameter is set in the AxlsxRad::Config object, that key will be checked to retain or discard added documents which can streamline the adding process. Not setting this value or setting this value to nil will disable checking and add all documents. 
+  - If the unique_key parameter is set in the AxlsxRad::Config object, that key will be checked to retain or discard added documents which can streamline the adding process. Not setting this value or setting this value to nil will disable checking and add all documents. 
 
-#Change Log
------------
+# Change Log
 
 - **2014-03-23**: 0.0.2
   - Add ability to filter duplicate documents
@@ -141,25 +151,38 @@ Notes
 - **2014-03-21**: 0.0.1
   - Initial release
 
-#Links
-------
+## Links
 
 Axlsx
 
-https://rubygems.org/gems/axlsx
+* https://rubygems.org/gems/axlsx
 
 JsonDoc
 
-https://rubygems.org/gems/jsondoc
+* https://rubygems.org/gems/jsondoc
 
-#Copyright and License
-----------------------
+## Copyright and License
 
-AxlsxRad &copy; 2014 by [John Wang](mailto:johncwang@gmail.com).
+AxlsxRad &copy; 2014-2016 by [John Wang](mailto:johncwang@gmail.com).
 
 AxlsxRad is licensed under the MIT license. Please see the LICENSE document for more information.
 
-Warranty
+### Warranty
 --------
 
 This software is provided "as is" and without any express or implied warranties, including, without limitation, the implied warranties of merchantibility and fitness for a particular purpose.
+
+ [gem-version-svg]: https://badge.fury.io/rb/axlsx_rad.svg
+ [gem-version-link]: http://badge.fury.io/rb/axlsx_rad
+ [downloads-svg]: http://ruby-gem-downloads-badge.herokuapp.com/axlsx_rad
+ [downloads-link]: https://rubygems.org/gems/axlsx_rad
+ [dependency-status-svg]: https://gemnasium.com/grokify/axlsx-rad-ruby.svg
+ [dependency-status-link]: https://gemnasium.com/grokify/axlsx-rad-ruby
+ [codeclimate-status-svg]: https://codeclimate.com/github/grokify/axlsx-rad-ruby/badges/gpa.svg
+ [codeclimate-status-link]: https://codeclimate.com/github/grokify/axlsx-rad-ruby
+ [scrutinizer-status-svg]: https://scrutinizer-ci.com/g/grokify/axlsx-rad-ruby/badges/quality-score.png?b=master
+ [scrutinizer-status-link]: https://scrutinizer-ci.com/g/grokify/axlsx-rad-ruby/?branch=master
+ [docs-rubydoc-svg]: https://img.shields.io/badge/docs-rubydoc-blue.svg
+ [docs-rubydoc-link]: http://www.rubydoc.info/gems/axlsx_rad/
+ [license-svg]: https://img.shields.io/badge/license-MIT-blue.svg
+ [license-link]: https://github.com/grokify/axlsx-rad-ruby/blob/master/LICENSE
